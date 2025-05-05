@@ -5,6 +5,9 @@ import index from "./routes/indexRoute";
 const app = express();
 const Port = process.env.PORT || 5000;
 app.use(express.json());
+import { startEmailScheduler } from "./controllers/mailerControler";
+
+startEmailScheduler();
 app.listen(Port, () => {
   console.log(`http://localhost:${Port}/`);
 });

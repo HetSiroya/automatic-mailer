@@ -1,6 +1,9 @@
 import express, { Request, Response, NextFunction } from "express";
 import { auth } from "../middlewares/token-decode";
-import { send } from "../controllers/mailerControler";
+import {
+  checkAndSendScheduledEmails,
+  send,
+} from "../controllers/mailerControler";
 const router = express.Router();
 
 router.post("/send", auth, async (req, res, next) => {
@@ -11,4 +14,10 @@ router.post("/send", auth, async (req, res, next) => {
   }
 });
 
-export default router
+router.get("/check-scheduled-emails", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await checkAndSendScheduledEmails(req, res);
+  } catch (e) {
+    next();
+  }
+});export default router;
