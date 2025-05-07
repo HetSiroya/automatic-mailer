@@ -4,11 +4,23 @@ import schedule from "node-schedule";
 import { CustomRequest } from "../middlewares/token-decode";
 import sendEmail from "../helpers/mailer";
 import { Mail } from "../models/mailModel";
+import path from "path";
+
+// Add base URL configuration (you can move this to environment variables)
+const BASE_URL = "http://localhost:3000";
 
 export const send = async (req: CustomRequest, res: Response) => {
   try {
     const userId = req.user?.id;
-    const { to, subject, message, scheduledDate, time } = req.body;
+
+    const to = req.body?.to;
+    const subject = req.body?.subject;
+    const message = req.body?.message;
+    const scheduledDate = req.body?.scheduledDate;
+    const time = req.body?.time;
+    const files = req.files as Express.Multer.File[];
+    console.log("Request body:", req.body);
+    console.log("to:", to);
 
     if (!to || !subject || !message) {
       return res.status(400).json({
@@ -22,6 +34,15 @@ export const send = async (req: CustomRequest, res: Response) => {
       });
     }
 
+    // Transform attachments to include full URLs
+    const attachments = files
+      ? files.map((file) => ({
+          filename: file.originalname,
+          path: file.path,
+          url: `${BASE_URL}/uploads/${path.basename(file.path)}`, // Add full URL
+        }))
+      : [];
+
     const newmail = new Mail({
       userId,
       to,
@@ -29,14 +50,34 @@ export const send = async (req: CustomRequest, res: Response) => {
       message,
       scheduledDate,
       time,
+      attachments,
     });
     await newmail.save();
 
-    res.status(201).json({
-      message: "Email scheduled successfully",
-
-      data: newmail,
-    });
+    if (scheduledDate) {
+      return res.status(201).json({
+        message: "Email scheduled successfully",
+        data: {
+          ...newmail.toObject(),
+          attachments: attachments.map((att) => ({
+            filename: att.filename,
+            url: att.url,
+          })),
+        },
+      });
+    } else {
+      await sendEmail(to, subject, message, attachments);
+      return res.status(201).json({
+        message: "Email sent successfully",
+        data: {
+          ...newmail.toObject(),
+          attachments: attachments.map((att) => ({
+            filename: att.filename,
+            url: att.url,
+          })),
+        },
+      });
+    }
   } catch (error) {
     console.error("Error in send function:", error);
     res.status(500).json({
@@ -45,13 +86,13 @@ export const send = async (req: CustomRequest, res: Response) => {
     });
   }
 };
-
 export const checkAndSendScheduledEmails = async (
   req: CustomRequest,
   res: Response
 ) => {
   try {
     const currentDate = new Date();
+    console.log("Current Date:", currentDate.toISOString().split("T")[0]);
     const currentHour = currentDate.getHours();
     const currentMinute = currentDate.getMinutes();
     const currentTimeString = `${currentHour
@@ -59,18 +100,15 @@ export const checkAndSendScheduledEmails = async (
       .padStart(2, "0")}:${currentMinute.toString().padStart(2, "0")}`;
 
     const scheduledEmails = await Mail.find({
-      status: { $ne: "sent" },
-      scheduledDate: {
-        $gte: new Date(currentDate.setHours(0, 0, 0, 0)),
-        $lte: new Date(currentDate.setHours(23, 59, 59, 999)),
-      },
-      time: currentTimeString,
+      status: "pending",
+      scheduledDate: currentDate.toISOString().split("T")[0],
     });
     console.log("Scheduled Emails:", scheduledEmails);
 
     const sentEmails = [];
 
     for (const email of scheduledEmails) {
+      console.log("Sending email ID:", email._id);
       try {
         await sendEmail(email.to, email.subject, email.message);
         await Mail.findByIdAndUpdate(email._id, { status: "sent" });

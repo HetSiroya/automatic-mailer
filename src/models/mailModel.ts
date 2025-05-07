@@ -15,7 +15,14 @@ interface mail {
   };
   sentAt: Date;
   error: string;
+  attachments: [
+    {
+      filename: string;
+      path: string;
+    }
+  ];
 }
+
 const mailSchema = new mongoose.Schema<mail>(
   {
     userId: {
@@ -25,7 +32,7 @@ const mailSchema = new mongoose.Schema<mail>(
     },
     to: {
       type: String,
-      required: true,
+      required: false,
     },
     subject: {
       type: String,
@@ -39,7 +46,7 @@ const mailSchema = new mongoose.Schema<mail>(
       type: String,
       required: true,
     },
-    time: {
+    time: { 
       type: String,
       required: true,
     },
@@ -55,6 +62,16 @@ const mailSchema = new mongoose.Schema<mail>(
     error: {
       type: String,
     },
+    attachments: [
+      {
+        filename: {
+          type: String,
+        },
+        path: {
+          type: String,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

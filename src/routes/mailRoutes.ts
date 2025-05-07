@@ -4,13 +4,19 @@ import {
   checkAndSendScheduledEmails,
   send,
 } from "../controllers/mailerControler";
+import { upload } from "../config/multerConfig";
+
 const router = express.Router();
 
-router.post("/send", auth, async (req, res, next) => {
+// Add body-parser middleware
+router.use(express.json());
+router.use(express.urlencoded({ extended: true }));
+
+router.post("/send", auth, upload.array('attachemnets'), async (req, res, next) => {
   try {
     await send(req, res);
   } catch (e) {
-    next();
+    next(e);
   }
 });
 

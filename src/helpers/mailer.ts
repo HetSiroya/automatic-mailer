@@ -13,19 +13,27 @@ const transporter = nodemailer.createTransport({
   port: 465,
 });
 
-async function sendEmail(to: string, subject: string, html: string) {
+const sendEmail = async (
+  to: string, 
+  subject: string, 
+  message: string, 
+  attachments?: { filename: string; path: string; }[]
+) => {
   try {
-    await transporter.sendMail({
-      from: "shiroyahet90@gmail.com",
-      to: to,
-      subject: subject,
-      html: html,
-    });
-    console.log("Email sent");
-  } catch (error) {
-    console.error("Error sending email:", error);
-    throw error;
+    const mailOptions = {
+      from: process.env.EMAIL,
+      to,
+      subject,
+      text: message,
+      attachments: attachments || []
+    };
+
+    return await transporter.sendMail(mailOptions);
   }
+  catch (error) {
+    console.error("Error sending email")}
+    
 }
 
-export default sendEmail;
+
+  export default sendEmail;
