@@ -6,19 +6,24 @@ import sendEmail from "../helpers/mailer";
 import { Mail } from "../models/mailModel";
 import path from "path";
 
+// Define response types
+interface MailResponse {
+  message: string;
+  data?: any;
+  error?: string;
+}
+
 const BASE_URL = process.env.BASE_URL;
 
-export const send = async (req: CustomRequest, res: Response) => {
+export const send = async (
+  req: CustomRequest,
+  res: Response<MailResponse>
+): Promise<Response<MailResponse>> => {
   try {
     const userId = req.user?.id;
 
-    const to = req.body?.to;
-    const subject = req.body?.subject;
-    const message = req.body?.message;
-    const scheduledDate = req.body?.scheduledDate;
-    const time = req.body?.time;
+    const { to, subject, message, scheduledDate, time } = req.body;
     const files = req.files as Express.Multer.File[];
-
     if (!to || !subject || !message) {
       return res.status(400).json({
         message: "Missing required fields: to, subject, or message",
@@ -42,7 +47,7 @@ export const send = async (req: CustomRequest, res: Response) => {
       userId,
       to,
       subject,
-      message,
+      message, 
       scheduledDate,
       time,
       attachments,
@@ -74,7 +79,7 @@ export const send = async (req: CustomRequest, res: Response) => {
     }
   } catch (error) {
     console.error("Error in send function:", error);
-    res.status(500).json({
+    return res.status(500).json({
       message: "Internal server error",
       error: error instanceof Error ? error.message : String(error),
     });
@@ -83,8 +88,8 @@ export const send = async (req: CustomRequest, res: Response) => {
 
 export const checkAndSendScheduledEmails = async (
   req: CustomRequest,
-  res: Response
-) => {
+  res: Response<MailResponse>
+): Promise<Response<MailResponse>> => {
   try {
     const currentDate = new Date();
     console.log("Current Date:", currentDate.toISOString().split("T")[0]);
@@ -126,9 +131,9 @@ export const checkAndSendScheduledEmails = async (
   }
 };
 
-export const startEmailScheduler = () => {
+export const startEmailScheduler = (): schedule.Job => {
   console.log("Email scheduler started");
-  schedule.scheduleJob("* * * * *", async () => {
+  return schedule.scheduleJob("* * * * *", async () => {
     try {
       const currentDate = new Date();
       console.log("Checking scheduled emails at:", currentDate);
