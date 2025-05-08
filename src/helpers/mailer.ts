@@ -1,23 +1,25 @@
 import express from "express";
 
 import nodemailer from "nodemailer";
+import SMTPTransport from "nodemailer/lib/smtp-transport";
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
-  host: "smtp.gmail.com",
+  service: process.env.service,
+  host: process.env.Host,
   auth: {
-    user: "shiroyahet90@gmail.com",
-    pass: "cujbmsosyrdmgxrs",
+    user: process.env.User,
+    pass: process.env.Pass,
   },
-  secure: true,
-  port: 465,
-});
+  secure: process.env.secure,
+  port: process.env.port,
+} as SMTPTransport.Options);
 
 const sendEmail = async (
-  to: string, 
-  subject: string, 
-  message: string, 
-  attachments?: { filename: string; path: string; }[]
+  to: string,
+  subject: string,
+  message: string,
+
+  attachments?: { filename: string; path: string }[]
 ) => {
   try {
     const mailOptions = {
@@ -25,15 +27,13 @@ const sendEmail = async (
       to,
       subject,
       text: message,
-      attachments: attachments || []
+      attachments: attachments || [],
     };
 
     return await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.error("Error sending email");
   }
-  catch (error) {
-    console.error("Error sending email")}
-    
-}
+};
 
-
-  export default sendEmail;
+export default sendEmail;

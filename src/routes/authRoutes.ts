@@ -4,7 +4,7 @@ const router = express.Router();
 
 router.post("/sign-up", async (req, res, next) => {
   try {
-    await signUp(req, res);
+    await signUp(req, res, next);
   } catch (e) {
     next();
   }

@@ -6,8 +6,7 @@ import sendEmail from "../helpers/mailer";
 import { Mail } from "../models/mailModel";
 import path from "path";
 
-// Add base URL configuration (you can move this to environment variables)
-const BASE_URL = "http://localhost:3000";
+const BASE_URL = process.env.BASE_URL;
 
 export const send = async (req: CustomRequest, res: Response) => {
   try {
@@ -19,8 +18,6 @@ export const send = async (req: CustomRequest, res: Response) => {
     const scheduledDate = req.body?.scheduledDate;
     const time = req.body?.time;
     const files = req.files as Express.Multer.File[];
-    console.log("Request body:", req.body);
-    console.log("to:", to);
 
     if (!to || !subject || !message) {
       return res.status(400).json({
@@ -34,15 +31,13 @@ export const send = async (req: CustomRequest, res: Response) => {
       });
     }
 
-    // Transform attachments to include full URLs
     const attachments = files
       ? files.map((file) => ({
           filename: file.originalname,
           path: file.path,
-          url: `${BASE_URL}/uploads/${path.basename(file.path)}`, // Add full URL
+          url: `${BASE_URL}/uploads/${path.basename(file.path)}`,
         }))
       : [];
-
     const newmail = new Mail({
       userId,
       to,
@@ -53,7 +48,6 @@ export const send = async (req: CustomRequest, res: Response) => {
       attachments,
     });
     await newmail.save();
-
     if (scheduledDate) {
       return res.status(201).json({
         message: "Email scheduled successfully",
@@ -86,6 +80,7 @@ export const send = async (req: CustomRequest, res: Response) => {
     });
   }
 };
+
 export const checkAndSendScheduledEmails = async (
   req: CustomRequest,
   res: Response
@@ -133,7 +128,6 @@ export const checkAndSendScheduledEmails = async (
 
 export const startEmailScheduler = () => {
   console.log("Email scheduler started");
-
   schedule.scheduleJob("* * * * *", async () => {
     try {
       const currentDate = new Date();
@@ -154,7 +148,12 @@ export const startEmailScheduler = () => {
       for (const email of scheduledEmails) {
         try {
           console.log("Attempting to send email:", email._id);
-          await sendEmail(email.to, email.subject, email.message);
+          await sendEmail(
+            email.to,
+            email.subject,
+            email.message,
+            email.attachments
+          );
           await Mail.findByIdAndUpdate(email._id, {
             status: "sent",
             sentAt: new Date(),

@@ -14,7 +14,6 @@ interface mail {
     default: "pending";
   };
   sentAt: Date;
-  error: string;
   attachments: [
     {
       filename: string;
@@ -46,7 +45,7 @@ const mailSchema = new mongoose.Schema<mail>(
       type: String,
       required: true,
     },
-    time: { 
+    time: {
       type: String,
       required: true,
     },
@@ -58,9 +57,6 @@ const mailSchema = new mongoose.Schema<mail>(
     },
     sentAt: {
       type: Date,
-    },
-    error: {
-      type: String,
     },
     attachments: [
       {

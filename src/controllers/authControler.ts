@@ -1,8 +1,13 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import userModel from "../models/userModel";
 import generateToken from "../helpers/token";
+import { comparePassword, hashPassword } from "../helpers/hased";
 
-export const signUp = async (req: Request, res: Response) => {
+export const signUp = async (
+  req: Request,
+  res: Response,
+  Next: NextFunction
+) => {
   try {
     const { name, email, password, confirmpassword, mobileNumber } = req.body;
     if (!name || !email || !password || !confirmpassword || !mobileNumber) {
@@ -21,10 +26,13 @@ export const signUp = async (req: Request, res: Response) => {
         message: "password and confirm password must be a same",
       });
     }
+    const hansedpassword = await hashPassword(String(password));
+    console.log("hased password", hansedpassword);
+
     const newUser = new userModel({
       name,
       email,
-      password,
+      password: hansedpassword,
       mobileNumber,
     });
     console.log("user", newUser);
@@ -66,12 +74,18 @@ export const login = async (req: Request, res: Response) => {
       });
     }
     const role = user.role;
-    if (password !== user.password) {
+    const check = await comparePassword(
+      String(password),
+      String(user.password)
+    );
+    console.log("check", check);
+    if (!check) {
       return res.status(400).json({
         status: 400,
-        message: "Password doesn't match",
+        message: "Auth fail",
       });
     }
+
     const tokenUser = {
       _id: user._id.toString(),
       email: user.email,
