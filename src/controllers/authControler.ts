@@ -2,22 +2,17 @@ import { NextFunction, Request, Response } from "express";
 import userModel from "../models/userModel";
 import generateToken from "../helpers/token";
 import { comparePassword, hashPassword } from "../helpers/hased";
-
-// Define response types
-interface AuthResponse {
-  message: string;
-  status: number;
-  error?: string;
-  data: Object;
-}
+import { CustomRequest } from "../middlewares/token-decode";
 
 export const signUp = async (
   req: Request,
-  res: Response<AuthResponse>,
+  res: Response,
   next: NextFunction
-): Promise<Response<AuthResponse>> => {
+) => {
   try {
     const { name, email, password, confirmpassword, mobileNumber } = req.body;
+    const profilePicture = req.file?.path; // Get uploaded file path
+
     if (!name || !email || !password || !confirmpassword || !mobileNumber) {
       return res.status(400).json({
         status: 400,
@@ -48,8 +43,8 @@ export const signUp = async (
       email,
       password: hansedpassword,
       mobileNumber,
+      profilePicture: profilePicture || "", // Add profile picture path
     });
-    console.log("user", newUser);
 
     const tokenUser = {
       _id: newUser._id.toString(),
@@ -59,14 +54,18 @@ export const signUp = async (
     };
 
     const token = generateToken(tokenUser);
-
     newUser.token = token;
-    newUser.save();
+    await newUser.save();
 
     return res.status(200).json({
-      message: "Succesfully created",
+      message: "Successfully created",
       status: 200,
-      data: newUser,
+      data: {
+        ...newUser.toObject(),
+        profilePicture: profilePicture
+          ? `/uploads/profiles/${profilePicture.split("\\").pop()}`
+          : "",
+      },
     });
   } catch (error: any) {
     console.log(error.message);
@@ -79,10 +78,7 @@ export const signUp = async (
   }
 };
 
-export const login = async (
-  req: Request,
-  res: Response<AuthResponse>
-): Promise<Response<AuthResponse>> => {
+export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
     const user = await userModel.findOne({ email: email });
